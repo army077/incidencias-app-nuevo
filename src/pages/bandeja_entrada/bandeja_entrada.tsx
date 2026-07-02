@@ -42,7 +42,7 @@ const columns = (navigate: (path: string) => void) => [
     title: "Fecha de permiso",
     dataIndex: "fecha_permiso",
     key: "fecha_permiso",
-    render: (fecha: string) => moment.utc(fecha).format("DD/MM/YYYY")
+    render: (fecha: string) => fecha ? moment(fecha.substring(0, 10), "YYYY-MM-DD").format("DD/MM/YYYY") : "-"
   },
   {
     title: "Status del permiso",
@@ -76,6 +76,7 @@ export const TablaPermisos: React.FC = () => {
   const [usuariosPermitidos, setUsuariosPermitidos] = useState<string[]>([]);
   const [loadingGerentes, setLoadingGerentes] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [pageSize, setPageSize] = useState(10);
   type Gerentes = string[];
 
   // -- Función para normalizar un texto (por si lo necesitas para "area") --
@@ -176,9 +177,12 @@ export const TablaPermisos: React.FC = () => {
   };
 
   // -- 4) Filtrar permisos por status y renderizar la tabla --
-  const permisosPendientes = data.filter((permiso) => permiso.status === "Pendiente");
-  const permisosAprobados = data.filter((permiso) => permiso.status === "Aprobado");
-  const permisosRechazados = data.filter((permiso) => permiso.status === "Rechazado");
+  const sortByRecent = (arr: Permiso[]) =>
+    [...arr].sort((a, b) => new Date(b.fecha_solicitud).getTime() - new Date(a.fecha_solicitud).getTime());
+
+  const permisosPendientes = sortByRecent(data.filter((permiso) => permiso.status === "Pendiente"));
+  const permisosAprobados = sortByRecent(data.filter((permiso) => permiso.status === "Aprobado"));
+  const permisosRechazados = sortByRecent(data.filter((permiso) => permiso.status === "Rechazado"));
 
   if (loading) {
     return <Spin size="large" style={{ display: "block", margin: "100px auto" }} />;
@@ -189,30 +193,48 @@ export const TablaPermisos: React.FC = () => {
       <Tabs.TabPane tab="Pendientes" key="1">
         <Table
           columns={columns(navigate)}
-          scroll={{ x: 800, y: 300 }}
           dataSource={permisosPendientes}
           rowKey="id"
-          pagination={{ pageSize: 5 }}
+          pagination={{
+            pageSize,
+            showSizeChanger: true,
+            pageSizeOptions: ['10', '20', '30', '50'],
+            onChange: (_, size) => setPageSize(size),
+          }}
+          scroll={{ y: 'calc(100vh - 260px)' }}
+          style={{ width: '100%' }}
         />
       </Tabs.TabPane>
 
       <Tabs.TabPane tab="Aprobados" key="2">
         <Table
           columns={columns(navigate)}
-          scroll={{ x: 800, y: 300 }}
           dataSource={permisosAprobados}
           rowKey="id"
-          pagination={{ pageSize: 5 }}
+          pagination={{
+            pageSize,
+            showSizeChanger: true,
+            pageSizeOptions: ['10', '20', '30', '50'],
+            onChange: (_, size) => setPageSize(size),
+          }}
+          scroll={{ y: 'calc(100vh - 260px)' }}
+          style={{ width: '100%' }}
         />
       </Tabs.TabPane>
 
       <Tabs.TabPane tab="Rechazados" key="3">
         <Table
           columns={columns(navigate)}
-          scroll={{ x: 800, y: 300 }}
           dataSource={permisosRechazados}
           rowKey="id"
-          pagination={{ pageSize: 5 }}
+          pagination={{
+            pageSize,
+            showSizeChanger: true,
+            pageSizeOptions: ['10', '20', '30', '50'],
+            onChange: (_, size) => setPageSize(size),
+          }}
+          scroll={{ y: 'calc(100vh - 260px)' }}
+          style={{ width: '100%' }}
         />
       </Tabs.TabPane>
     </Tabs>

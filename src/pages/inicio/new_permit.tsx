@@ -20,6 +20,7 @@ type FormValues = {
   comentarios: string;
   status: string;
   correo_lider: string;
+  fecha_permiso?: any;
 };
 
 
@@ -113,31 +114,24 @@ export const CreatePermit = () => {
   }, []);
 
 
-const enviarTemplate = async (variables: any, telefono: string) => {
+const enviarTemplate = async (variables: Record<string, string>, telefono: string): Promise<boolean> => {
     try {
         const response = await fetch(
             "https://desarrollotecnologicoar.com/api12/almacen/send-whatsapp-template",
             {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     telefono: '+52' + telefono,
-
-                    contentSid:
-                        "HX32587ae923cf6e80aca016b0a2ea749e",
-
-                    variables: variables
-                })
+                    contentSid: "HX32587ae923cf6e80aca016b0a2ea749e",
+                    variables,
+                }),
             }
         );
-
-        const data = await response.json();
-
+        return response.ok;
     } catch (error) {
-        console.error(error);
+        console.error("Error al enviar WhatsApp:", error);
+        return false;
     }
 };
 
@@ -193,7 +187,14 @@ const enviarTemplate = async (variables: any, telefono: string) => {
       const telefono_lider = lider?.telefono;
 
       // Establecer el status como "Pendiente"
-      const dataToSend = { ...values, status: "Pendiente", correo_lider: correo_lider };
+      const dataToSend = {
+        ...values,
+        status: "Pendiente",
+        correo_lider: correo_lider,
+        fecha_permiso: values.fecha_permiso
+          ? dayjs(values.fecha_permiso).format("YYYY-MM-DD")
+          : undefined,
+      };
 
       // console.log("Datos enviados al servidor:", dataToSend);
 
@@ -207,19 +208,25 @@ const enviarTemplate = async (variables: any, telefono: string) => {
       );
       if (response.ok) {
         const responseData = await response.json();
-        const permisoId = responseData.id || responseData.permiso_id || '';
-        
+        const permisoId = String(responseData.id ?? responseData.permiso_id ?? '');
+
         message.success("Permiso registrado con éxito");
-        const variables = {
-          '1': values.jefe_inmediato,
-          '2': values.nombre_completo,
-          '3': values.tipo_permiso,
-          '4': permisoId
+
+        if (!telefono_lider) {
+          message.warning("El líder seleccionado no tiene teléfono registrado; no se envió notificación WhatsApp.");
+        } else {
+          const variables: Record<string, string> = {
+            '1': values.jefe_inmediato,
+            '2': values.nombre_completo,
+            '3': values.tipo_permiso,
+            '4': permisoId,
+          };
+          const enviado = await enviarTemplate(variables, telefono_lider);
+          if (!enviado) {
+            message.warning("Permiso guardado, pero no se pudo enviar la notificación de WhatsApp.");
+          }
         }
-        
-        // Enviar mensaje de WhatsApp al jefe inmediato
-        await enviarTemplate(variables, telefono_lider || "telefono_no_encontrado");
-        
+
         form.resetFields();
 
       } else {

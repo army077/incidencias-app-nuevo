@@ -34,7 +34,8 @@ import {
 } from "./pages/incidencias";
 import { useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "./firebaseConfig"; // Asegúrate de que tu archivo firebaseConfig.js esté bien configurado
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { auth, db } from "./firebaseConfig"; // Asegúrate de que tu archivo firebaseConfig.js esté bien configurado
 import Login from "./login"; // El componente de Login que creaste
 import UserCreate from "./pages/alta_usuarios/users_form";
 import { CreatePermit } from "./pages/inicio/new_permit";
@@ -53,22 +54,27 @@ function App() {
   const [authenticated, setAuthenticated] = useState(false); // Estado de autenticación
   const [loading, setLoading] = useState(true); // Para mostrar un estado de carga
   const [userEmail, setuserEmail] = useState<string | null>(null);
+  const [userArea, setUserArea] = useState<string | null>(null);
   const [usuariosSidebar, setUsuariosSidebar] = useState<string[]>([]);
   const count = useUnreviewedPermitsCount();
   useEffect(() => {
-    // Verificación de autenticación con Firebase
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setAuthenticated(true);
-        setuserEmail(user.email); // Guardamos el correo del usuario
+        setuserEmail(user.email);
+        try {
+          const q = query(collection(db, "usuarios"), where("correo", "==", user.email));
+          const snap = await getDocs(q);
+          if (!snap.empty) setUserArea(snap.docs[0].data().area ?? null);
+        } catch { /* ignorar */ }
       } else {
         setAuthenticated(false);
-        setuserEmail(null); // No hay usuario
+        setuserEmail(null);
+        setUserArea(null);
       }
-      setLoading(false); // Terminamos el estado de carga
+      setLoading(false);
     });
-
-    return () => unsubscribe(); // Limpiamos el listener al desmontar
+    return () => unsubscribe();
   }, []);
 
 
@@ -122,6 +128,12 @@ function App() {
     );
   };
 
+
+  const normArea = (a: string) =>
+    a.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, "_");
+  const canSeeLideres =
+    userEmail === 'developer@asiarobotica.com' || userEmail === 'marada@asiarobotica.com' ||
+    normArea(userArea ?? '') === 'recursos_humanos';
 
   const resources =
     usuariosSidebar.includes(userEmail || "") // Verifica si el correo está en la lista
@@ -180,11 +192,11 @@ function App() {
           list: "/impresion_acta",
           meta: { label: "Impresión de acta", icon: <FilePdfOutlined /> },
         },
-        {
+        ...(canSeeLideres ? [{
           name: "Lideres",
           list: "/lideres",
           meta: { label: "Lideres", icon: <FaUserTie /> },
-        },
+        }] : []),
       ]
       : [];
   return (

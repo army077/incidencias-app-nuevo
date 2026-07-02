@@ -110,7 +110,9 @@ export const DetallePermiso = () => {
         nombre_emisor: permiso.nombre_completo,
         jefe_inmediato: permiso.jefe_inmediato,
         area: permiso.area,
-        fecha_permiso: dayjs(permiso.fecha_permiso).format("YYYY-MM-DD")
+        fecha_permiso: permiso.fecha_permiso
+          ? permiso.fecha_permiso.substring(0, 10)
+          : ""
       });
     }
     setIsModalVisible(true); // Mostrar el modal

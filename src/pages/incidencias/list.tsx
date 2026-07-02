@@ -27,7 +27,7 @@ export const BlogPostList = () => {
   const [loading, setLoading] = useState(true);
   const [searchText, setSearchText] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize] = useState(5); // Tamaño de la página
+  const [pageSize, setPageSize] = useState(10); // Tamaño de la página
   const [usuariosPermitidos, setUsuariosPermitidos] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loadingGerentes, setLoadingGerentes] = useState(true);
@@ -55,18 +55,25 @@ export const BlogPostList = () => {
       .toLowerCase()
       .replace(/\s+/g, "_");
 
+  const sortByRecent = (data: BaseRecord[]) =>
+    [...data].sort((a: any, b: any) => {
+      const dateA = new Date(a.marca_temporal).getTime();
+      const dateB = new Date(b.marca_temporal).getTime();
+      return dateB - dateA;
+    });
+
   const filtrarDatos = useCallback(
     (area: string | null, data: BaseRecord[]) => {
       const dataMutable = [...data];
 
       if (usuariosPermitidos.includes(userEmail || "")) {
-        setFilteredData(dataMutable);
+        setFilteredData(sortByRecent(dataMutable));
       } else {
         const areaFiltrada = convertirTexto(area || "");
         const datosFiltrados = dataMutable.filter(
           (incidencia: any) => convertirTexto(incidencia.area) === areaFiltrada
         );
-        setFilteredData(datosFiltrados);
+        setFilteredData(sortByRecent(datosFiltrados));
       }
     },
     [userEmail]
@@ -201,7 +208,8 @@ export const BlogPostList = () => {
         dataSource={paginatedData}
         rowKey="id"
         pagination={false}
-        scroll={{ x: 800, y: 300 }}
+        scroll={{ y: 'calc(100vh - 300px)' }}
+        style={{ width: '100%' }}
       >
         <Table.Column dataIndex="id" title="ID" />
         <Table.Column dataIndex="persona_emisor" title="Persona Emisor" />
@@ -235,8 +243,9 @@ export const BlogPostList = () => {
         current={currentPage}
         pageSize={pageSize}
         total={searchedData.length}
-        onChange={handlePageChange}
-        style={{ marginTop: 16, textAlign: "right" }}
+        onChange={handlePageChange}        onShowSizeChange={(_, size) => { setPageSize(size); setCurrentPage(1); }}
+        showSizeChanger
+        pageSizeOptions={['10', '20', '30', '50']}        style={{ marginTop: 16, textAlign: "right" }}
       />
     </List>
   );

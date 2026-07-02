@@ -94,8 +94,11 @@ const HomePage: React.FC = () => {
 
         if (response.ok) {
           const data = await response.json();
-          const permisosArray = Array.isArray(data) ? data : [data];
-          setPermisos(permisosArray);
+          const permisosArray: Permiso[] = Array.isArray(data) ? data : [data];
+          const sorted = permisosArray.sort(
+            (a, b) => new Date(b.fecha_solicitud).getTime() - new Date(a.fecha_solicitud).getTime()
+          );
+          setPermisos(sorted);
         } else {
           message.error("Aún no has solicitado permisos.");
           setPermisos([]);
@@ -237,7 +240,9 @@ const HomePage: React.FC = () => {
           columns={columns}
           loading={loading}
           rowKey="id"
-          scroll={{ x: 800 }}
+          pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: ['10', '20', '30', '50'] }}
+          scroll={{ y: 'calc(100vh - 280px)' }}
+          style={{ width: '100%' }}
         />
       </div>
     </div>

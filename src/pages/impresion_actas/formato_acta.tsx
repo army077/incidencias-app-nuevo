@@ -76,10 +76,15 @@ export const PDFEditor = () => {
         fetchLideres();
     }, []);
 
+    const formatearArea = (area: string) => {
+        const conEspacios = area.replace(/_/g, ' ');
+        return conEspacios.charAt(0).toUpperCase() + conEspacios.slice(1);
+    };
+
     const jefesInmediatosOptions = jefesInmediatos.map((jefe) => ({
-        value: jefe.nombre, // El `label` completo será el `value` en este caso
-        label: `${jefe.nombre} - ${jefe.area}`, // Mostrar "Nombre - Área" en el desplegable
-        area: jefe.area, // Puedes incluir el área si es necesario para otros propósitos
+        value: jefe.nombre,
+        label: `${jefe.nombre} - ${formatearArea(jefe.area)}`,
+        area: formatearArea(jefe.area),
     }));
 
     // Inicializar actaValues con los datos recibidos
@@ -140,6 +145,15 @@ export const PDFEditor = () => {
     };
 
 
+    const formatearFechaEspanol = (fechaStr: string): string => {
+        if (!fechaStr) return "";
+        const partes = fechaStr.slice(0, 10).split('-').map(Number);
+        if (partes.length < 3 || isNaN(partes[0])) return fechaStr;
+        const [anio, mes, dia] = partes;
+        const meses = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+        return `${dia} de ${meses[mes - 1]}, ${anio}`;
+    };
+
     const drawFields = async (pdfDoc: PDFDocument, actaValues: ActaValues, cede: string) => {
         const config = cedeConfigurations[cede];
         if (!config) {
@@ -151,25 +165,23 @@ export const PDFEditor = () => {
         const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
         const fieldsToDraw = {
-            fecha: actaValues.fecha?.slice(0, 10) || "",
-            hora: actaValues.fecha?.slice(10, 16) || "",
+            fecha: formatearFechaEspanol(actaValues.fecha || ""),
+            hora: actaValues.fecha?.slice(11, 16) || "",
             asunto: actaValues.asunto,
             lider_recortado: actaValues.lider_inmediato, // solo el nombre del líder
-            lider_area: actaValues.area_lider,        // área del líder
+            lider_area: actaValues.area_lider ? `Jefe de ${actaValues.area_lider}` : "", // cargo del líder
             empleado: actaValues.empleado,
-            fecha_suceso: actaValues.fecha_suceso,
+            fecha_suceso: formatearFechaEspanol(actaValues.fecha_suceso || ""),
             area: actaValues.area,           // área del empleado
         };
 
         Object.entries(fieldsToDraw).forEach(([field, value]) => {
             if (value && config[field]) {
                 let { x, y, size = 10 } = config[field];
-                if (value.length > 30) {
-                    size = 8;
-                    value = value.slice(0, value.indexOf('/'))
-                } if (value.length > 35) {
+                if (value.length > 40) {
                     size = 7;
-                    value = value.slice(0, value.indexOf('/'))
+                } else if (value.length > 30) {
+                    size = 8;
                 }
                 firstPage.drawText(value, { x, y: firstPage.getHeight() - y, size, font: helveticaFont, color: rgb(0, 0, 0) });
             }

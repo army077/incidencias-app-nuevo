@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Form, Input, Button, message, Table, Popconfirm, Select } from "antd";
+import { Form, Input, Button, message, Table, Popconfirm, Select, Modal } from "antd";
 import { Create, useForm } from "@refinedev/antd";
 import { auth, db } from '../../firebaseConfig';
 import { collection, getDocs, doc, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
@@ -48,6 +48,9 @@ const UserCreate: React.FC = () => {
     const [usuariosPermitidos, setUsuariosPermitidos] = useState<string[]>([]);
     const [loadingGerentes, setLoadingGerentes] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [editingUser, setEditingUser] = useState<any>(null);
+    const [editModalVisible, setEditModalVisible] = useState(false);
+    const [editForm] = Form.useForm();
     type Gerentes = string[];
 
     useEffect(() => {
@@ -183,6 +186,45 @@ const UserCreate: React.FC = () => {
         }
     };
 
+    // Editar usuario — abre el modal con datos prellenados
+    const handleEdit = (record: any) => {
+        setEditingUser(record);
+        editForm.setFieldsValue({
+            nombre: record.nombre,
+            apellido_paterno: record.apellido_paterno,
+            apellido_materno: record.apellido_materno,
+            area: record.area,
+            numero_empleado: record.numero_empleado,
+        });
+        setEditModalVisible(true);
+    };
+
+    // Guardar cambios del usuario editado en Firestore
+    const handleUpdate = async (values: any) => {
+        if (!editingUser) return;
+        try {
+            await setDoc(
+                doc(db, 'usuarios', editingUser.id),
+                {
+                    nombre: values.nombre,
+                    apellido_paterno: values.apellido_paterno,
+                    apellido_materno: values.apellido_materno,
+                    area: values.area,
+                    correo: editingUser.correo,
+                    fecha_creado: editingUser.fecha_creado,
+                    numero_empleado: values.numero_empleado,
+                }
+            );
+            message.success('Usuario actualizado correctamente.');
+            setEditModalVisible(false);
+            setEditingUser(null);
+            fetchUsuarios();
+        } catch (err) {
+            console.error('Error al actualizar usuario:', err);
+            message.error('Error al actualizar el usuario.');
+        }
+    };
+
     // Eliminar usuario de Firestore
     const handleDelete = async (userId: string) => {
         try {
@@ -240,14 +282,23 @@ const UserCreate: React.FC = () => {
             title: 'Acciones',
             key: 'acciones',
             render: (text: any, record: any) => (
-                <Popconfirm
-                    title="¿Estás seguro de eliminar este usuario?"
-                    onConfirm={() => handleDelete(record.id)}
-                    okText="Sí"
-                    cancelText="No"
-                >
-                    <Button danger disabled={!isUserAllowed}>Eliminar</Button>
-                </Popconfirm>
+                <div style={{ display: 'flex', gap: 8 }}>
+                    <Button
+                        type="primary"
+                        disabled={!isUserAllowed}
+                        onClick={() => handleEdit(record)}
+                    >
+                        Editar
+                    </Button>
+                    <Popconfirm
+                        title="¿Estás seguro de eliminar este usuario?"
+                        onConfirm={() => handleDelete(record.id)}
+                        okText="Sí"
+                        cancelText="No"
+                    >
+                        <Button danger disabled={!isUserAllowed}>Eliminar</Button>
+                    </Popconfirm>
+                </div>
             ),
         },
     ];
@@ -355,6 +406,33 @@ const UserCreate: React.FC = () => {
             </div>
 
             <Table dataSource={filteredUsuarios} columns={columns} rowKey="id" pagination={{ pageSize: 5 }} scroll={{ x: 800, y: 300 }} />
+
+            <Modal
+                title="Editar Usuario"
+                open={editModalVisible}
+                onCancel={() => { setEditModalVisible(false); setEditingUser(null); }}
+                onOk={() => editForm.submit()}
+                okText="Guardar"
+                cancelText="Cancelar"
+            >
+                <Form form={editForm} layout="vertical" onFinish={handleUpdate}>
+                    <Form.Item label="Nombre" name="nombre" rules={[{ required: true, message: 'Campo requerido' }]}>
+                        <Input />
+                    </Form.Item>
+                    <Form.Item label="Apellido Paterno" name="apellido_paterno" rules={[{ required: true, message: 'Campo requerido' }]}>
+                        <Input />
+                    </Form.Item>
+                    <Form.Item label="Apellido Materno" name="apellido_materno">
+                        <Input />
+                    </Form.Item>
+                    <Form.Item label="Área de Trabajo" name="area" rules={[{ required: true, message: 'Campo requerido' }]}>
+                        <Select options={opciones} />
+                    </Form.Item>
+                    <Form.Item label="Número de Empleado" name="numero_empleado">
+                        <Input />
+                    </Form.Item>
+                </Form>
+            </Modal>
         </Create>
     );
 };
