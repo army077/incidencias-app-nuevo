@@ -61,5 +61,14 @@ export const cedeConfigurations: Record<string, { [key: string]: { x: number; y:
         fecha_suceso: { x: 115, y: 265, size: 10 },
         area: { x: 450, y: 266, size: 10 },
     },
-    
+    "aldama": {
+        fecha: { x: 320, y:  117, size: 12 },
+        hora: { x: 160, y: 170, size: 12 },
+        asunto: { x: 240, y: 140, size: 11 },
+        lider_recortado: { x: 115, y:205, size: 10 },
+        lider_area: { x: 352, y:205, size: 10 },
+        empleado: { x: 100, y:220, size: 10 },
+        fecha_suceso: { x: 240, y:265, size: 10 },
+        area: { x: 150, y:283, size: 10 },
+    },    
 };

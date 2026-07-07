@@ -76,7 +76,7 @@ export const DetallePermiso = () => {
 
     if (
       currentTipoRegistro &&
-      ["Mala actitud", "Llegada tarde no justificada.","Falta injustificada."].includes(currentTipoRegistro) &&
+      ["Mala actitud", "Falta injustificada."].includes(currentTipoRegistro) &&
       !fileToUpload
     ) {
       setOkButtonDisabled(true);
@@ -274,7 +274,6 @@ export const DetallePermiso = () => {
               { value: "Permiso de salida temprano.", label: "Permiso de salida temprano." },
               {value: "Permiso de home office",label: "Permiso de home office"},
               {value: "Retardo", label: "Retardo"},
-              { value: "Llegada tarde no justificada.", label: "Llegada tarde no justificada." },
               { value: "Permiso de llegada tarde por cita médica (IMSS).", label: "Permiso de llegada tarde por cita médica (IMSS)." },
               { value: "Falta justificada de acuerdo al Reglamento Interior de Trabajo.", label: "Falta justificada de acuerdo al Reglamento Interior de Trabajo." },
               { value: "Falta injustificada.", label: "Falta injustificada." },
@@ -282,9 +281,7 @@ export const DetallePermiso = () => {
               { value: "Permiso para cambio de horario temporal", label: "Permiso para cambio de horario temporal" },
               { value: "Falta por incapacidad del IMSS.", label: "Falta por incapacidad del IMSS." },
               { value: "Permiso de inasistencia sin goce de sueldo.", label: "Permiso de inasistencia sin goce de sueldo." },
-              { value: "Otro (negativo).", label: "Otro (negativo)." },
-              { value: "Otro (positivo).", label: "Otro (positivo)." },
-
+              { value: "Reconocimiento al desempeño", label: "Reconocimiento al desempeño" },
             ]} />
           </Form.Item>
 
@@ -311,7 +308,7 @@ export const DetallePermiso = () => {
             <Input disabled />
           </Form.Item>
 
-          {(tipoRegistro === "Mala actitud" || tipoRegistro === "Llegada tarde no justificada."  || tipoRegistro === "Falta injustificada.") && (
+          {(tipoRegistro === "Mala actitud" || tipoRegistro === "Falta injustificada.") && (
             <Form.Item
               label="Confirme la emisión física del Acta Administrativa:"
               name="status_acta"
@@ -327,7 +324,7 @@ export const DetallePermiso = () => {
               />
             </Form.Item>
           )}
-          {(tipoRegistro === "Mala actitud" || tipoRegistro === "Llegada tarde no justificada."  || tipoRegistro === "Falta injustificada.") && (
+          {(tipoRegistro === "Mala actitud" || tipoRegistro === "Falta injustificada.") && (
               <>
                 <Form.Item>
                   <Button type="primary" onClick={handleGenerarActa}>

@@ -278,7 +278,8 @@ export const PDFEditor = () => {
             case "mty": return "/acta_mty.pdf";
             case "ocotlan": return "/acta_ocotlan.pdf";
             case "juan_manuel": return "/acta_jm.pdf";
-            default: return null; // Asegúrate de manejar un valor por defecto correctamente
+            case "aldama": return "/acta_aldama.pdf";
+            default: return null;
         }
     };
 
@@ -296,6 +297,7 @@ export const PDFEditor = () => {
                                 { value: "cdmx", label: "Hacienda Escolástica #131, Hacienda del Rosario, Azcapotzalco CDMX" },
                                 { value: "mty", label: "Vicente Suarez 962, Col. Obrera, Monterrey, N.L" },
                                 { value: "ocotlan", label: "Noviembre 187 A, Col. Pedro Moreno, Ocotlan Jal" },
+                                { value: "aldama", label: "C. Aldama 679, El Mante, 45235 Zapopan, Jal." },
                             ]} onChange={(value) => handleChange("cede", value)} />
                         </Form.Item>
                         {/* --------------------------------------------------------------------------------------------------------------- */}
