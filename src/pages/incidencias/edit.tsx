@@ -256,10 +256,6 @@ export const BlogPostEdit = () => {
               { value: "Permiso de salida temprano.", label: "Permiso de salida temprano." },
               { value: "Retardo", label: "Retardo" },
               {
-                value: "Llegada tarde no justificada.",
-                label: "Llegada tarde no justificada.",
-              },
-              {
                 value: "Permiso de llegada tarde por cita médica (IMSS).",
                 label: "Permiso de llegada tarde por cita médica (IMSS).",
               },
@@ -283,8 +279,7 @@ export const BlogPostEdit = () => {
                 value: "Permiso de inasistencia sin goce de sueldo.",
                 label: "Permiso de inasistencia sin goce de sueldo.",
               },
-              { value: "Otro (negativo).", label: "Otro (negativo)." },
-              { value: "Otro (positivo).", label: "Otro (positivo)." },
+              { value: "Reconocimiento al desempeño", label: "Reconocimiento al desempeño" },
             ]}
 
           />

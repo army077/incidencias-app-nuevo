@@ -260,7 +260,7 @@ export const BlogPostCreate = () => {
     ...saveButtonProps,
     disabled: (() => {
 
-      if (tipoRegistro === "Mala actitud" || tipoRegistro === "Llegada tarde no justificada." || tipoRegistro === "Falta injustificada.") {
+      if (tipoRegistro === "Mala actitud" || tipoRegistro === "Falta injustificada.") {
         return (
           !fileToUpload || // Si no hay archivo, deshabilitar
           !fileToUpload.name.endsWith(".pdf") || // Si no es PDF, deshabilitar
@@ -423,10 +423,6 @@ export const BlogPostCreate = () => {
               { value: "Permiso de salida temprano.", label: "Permiso de salida temprano." },
               { value: "Retardo", label: "Retardo" },
               {
-                value: "Llegada tarde no justificada.",
-                label: "Llegada tarde no justificada.",
-              },
-              {
                 value: "Permiso de llegada tarde por cita médica (IMSS).",
                 label: "Permiso de llegada tarde por cita médica (IMSS).",
               },
@@ -450,8 +446,7 @@ export const BlogPostCreate = () => {
                 value: "Permiso de inasistencia sin goce de sueldo.",
                 label: "Permiso de inasistencia sin goce de sueldo.",
               },
-              { value: "Otro (negativo).", label: "Otro (negativo)." },
-              { value: "Otro (positivo).", label: "Otro (positivo)." },
+              { value: "Reconocimiento al desempeño", label: "Reconocimiento al desempeño" },
             ]}
           />
         </Form.Item>
@@ -465,7 +460,7 @@ export const BlogPostCreate = () => {
         </Form.Item>
 
         {/* Condicionalmente renderizar `status_acta` */}
-        {(tipoRegistro === "Mala actitud" || tipoRegistro === "Llegada tarde no justificada." || tipoRegistro === "Falta injustificada.") && (
+        {(tipoRegistro === "Mala actitud" || tipoRegistro === "Falta injustificada.") && (
           <Form.Item
             label="Confirme la emisión física del Acta Administrativa:"
             name="status_acta"
@@ -485,7 +480,6 @@ export const BlogPostCreate = () => {
         {/* Mostrar botón "Generar Acta" condicionalmente */}
         {[
           "Reporte de actitud (irresponsabilidad, acciones negativas, daños, etc).",
-          "Llegada tarde no justificada.",
           "Falta injustificada.",
           "Mala actitud",
         ].includes(tipoRegistro || "") && (
