@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Form, Input, Button, message, Table, Popconfirm, Select, Modal } from "antd";
+import { Form, Input, Button, message, Table, Popconfirm, Select, Modal, Tag } from "antd";
 import { Create, useForm } from "@refinedev/antd";
-import { auth, db } from '../../firebaseConfig';
-import { collection, getDocs, doc, setDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { auth, db, functions } from '../../firebaseConfig';
+import { collection, getDocs, doc, setDoc, deleteDoc, serverTimestamp, query, where } from 'firebase/firestore';
 import { onAuthStateChanged } from "firebase/auth";
+import { httpsCallable } from 'firebase/functions';
 import { useNavigate } from 'react-router-dom';
 // import { usuariosPermitidos } from '../../user_config';
 import axios from 'axios';
@@ -43,32 +44,20 @@ const UserCreate: React.FC = () => {
     const [usuarios, setUsuarios] = useState<any[]>([]);
     const [selectedArea, setSelectedArea] = useState<string | null>(null);
     const [searchNombre, setSearchNombre] = useState('');
-    const [isUserAllowed, setIsUserAllowed] = useState(false);
     const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
-    const [usuariosPermitidos, setUsuariosPermitidos] = useState<string[]>([]);
-    const [loadingGerentes, setLoadingGerentes] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const [userArea, setUserArea] = useState<string | null>(null);
     const [editingUser, setEditingUser] = useState<any>(null);
     const [editModalVisible, setEditModalVisible] = useState(false);
+    const [reactivando, setReactivando] = useState(false); // true cuando el modal se abre desde Reactivar
     const [editForm] = Form.useForm();
-    type Gerentes = string[];
 
-    useEffect(() => {
-        const fetchGerentes = async () => {
-            try {
-                const { data } = await axios.get<Gerentes>(
-                    "https://desarrollotecnologicoar.com/api3/usuarios_permitidos/"
-                );
-                setUsuariosPermitidos(data ?? []);
-            } catch (e) {
-                setError((prev) => prev ?? "Error al cargar gerentes."); // conserva el primero si ya hay
-            } finally {
-                setLoadingGerentes(false);
-            }
-        };
+    const normArea = (a: string) =>
+        a.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, '_');
 
-        fetchGerentes();
-    }, []);
+    const isAuthorized =
+        currentUserEmail === 'developer@asiarobotica.com' || currentUserEmail === 'marada@asiarobotica.com' ||
+        normArea(userArea ?? '') === 'recursos_humanos';
+
     const convertirTexto = (texto: string): string =>
         texto
             .normalize("NFD")
@@ -84,19 +73,21 @@ const UserCreate: React.FC = () => {
             .trim();
 
     useEffect(() => {
-        const unsuscribe = onAuthStateChanged(auth, (user) => {
+        const unsuscribe = onAuthStateChanged(auth, async (user) => {
             if (user) {
                 setCurrentUserEmail(user.email || null);
-                // ojo: aquí usuariosPermitidos puede estar vacío si aún no llega
-                setIsUserAllowed(usuariosPermitidos.includes(user.email || ""));
+                try {
+                    const q = query(collection(db, 'usuarios'), where('correo', '==', user.email));
+                    const snap = await getDocs(q);
+                    if (!snap.empty) setUserArea(snap.docs[0].data().area ?? null);
+                } catch { /* ignorar */ }
             } else {
-                setIsUserAllowed(false);
                 setCurrentUserEmail(null);
+                setUserArea(null);
             }
         });
         return () => unsuscribe();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [usuariosPermitidos]); // <— depende de usuariosPermitidos
+    }, []);
 
     const onFinish = async (values: any) => {
         try {
@@ -188,6 +179,21 @@ const UserCreate: React.FC = () => {
 
     // Editar usuario — abre el modal con datos prellenados
     const handleEdit = (record: any) => {
+        setReactivando(false);
+        setEditingUser(record);
+        editForm.setFieldsValue({
+            nombre: record.nombre,
+            apellido_paterno: record.apellido_paterno,
+            apellido_materno: record.apellido_materno,
+            area: record.area,
+            numero_empleado: record.numero_empleado,
+        });
+        setEditModalVisible(true);
+    };
+
+    // Reactivar con edición — abre el mismo modal marcado para reactivar
+    const handleReactivar = (record: any) => {
+        setReactivando(true);
         setEditingUser(record);
         editForm.setFieldsValue({
             nombre: record.nombre,
@@ -213,11 +219,13 @@ const UserCreate: React.FC = () => {
                     correo: editingUser.correo,
                     fecha_creado: editingUser.fecha_creado,
                     numero_empleado: values.numero_empleado,
+                    activo: reactivando ? true : (editingUser.activo ?? true),
                 }
             );
-            message.success('Usuario actualizado correctamente.');
+            message.success(reactivando ? 'Usuario reactivado con datos actualizados.' : 'Usuario actualizado correctamente.');
             setEditModalVisible(false);
             setEditingUser(null);
+            setReactivando(false);
             fetchUsuarios();
         } catch (err) {
             console.error('Error al actualizar usuario:', err);
@@ -225,15 +233,29 @@ const UserCreate: React.FC = () => {
         }
     };
 
-    // Eliminar usuario de Firestore
-    const handleDelete = async (userId: string) => {
+    // Dar de baja — soft delete en Firestore + eliminar de Firebase Auth
+    const handleDarDeBaja = async (userId: string) => {
         try {
-            await deleteDoc(doc(db, 'usuarios', userId));
-            message.success('Usuario eliminado con éxito.');
+            const deleteAuthUser = httpsCallable(functions, 'deleteAuthUser');
+            await deleteAuthUser({ uid: userId });
+            await setDoc(doc(db, 'usuarios', userId), { activo: false }, { merge: true });
+            message.success('Usuario dado de baja y credenciales eliminadas.');
             fetchUsuarios();
         } catch (error) {
-            console.error('Error al eliminar usuario:', error);
-            message.error('Error al eliminar usuario.');
+            console.error('Error al dar de baja:', error);
+            message.error('Error al dar de baja al usuario.');
+        }
+    };
+
+    // Reactivar usuario
+    const handleActivar = async (userId: string) => {
+        try {
+            await setDoc(doc(db, 'usuarios', userId), { activo: true }, { merge: true });
+            message.success('Usuario reactivado.');
+            fetchUsuarios();
+        } catch (error) {
+            console.error('Error al reactivar:', error);
+            message.error('Error al reactivar al usuario.');
         }
     };
 
@@ -279,25 +301,45 @@ const UserCreate: React.FC = () => {
         },
         { title: 'Numero de empleado', dataIndex: 'numero_empleado', key: 'numero_empleado', sorter: (a: any, b: any) => a.numero_empleado - b.numero_empleado, },
         {
+            title: 'Estado',
+            key: 'activo',
+            render: (_: any, record: any) => (
+                record.activo === false
+                    ? <Tag color="red">Inactivo</Tag>
+                    : <Tag color="green">Activo</Tag>
+            ),
+        },
+        {
             title: 'Acciones',
             key: 'acciones',
-            render: (text: any, record: any) => (
+            render: (_: any, record: any) => (
                 <div style={{ display: 'flex', gap: 8 }}>
                     <Button
                         type="primary"
-                        disabled={!isUserAllowed}
+                        disabled={!isAuthorized}
                         onClick={() => handleEdit(record)}
                     >
                         Editar
                     </Button>
-                    <Popconfirm
-                        title="¿Estás seguro de eliminar este usuario?"
-                        onConfirm={() => handleDelete(record.id)}
-                        okText="Sí"
-                        cancelText="No"
-                    >
-                        <Button danger disabled={!isUserAllowed}>Eliminar</Button>
-                    </Popconfirm>
+                    {record.activo === false ? (
+                        <Popconfirm
+                            title="¿Reactivar este usuario? Podrás actualizar sus datos si la licencia fue heredada."
+                            onConfirm={() => handleReactivar(record)}
+                            okText="Sí, editar y reactivar"
+                            cancelText="No"
+                        >
+                            <Button type="default" disabled={!isAuthorized}>Reactivar</Button>
+                        </Popconfirm>
+                    ) : (
+                        <Popconfirm
+                            title="¿Dar de baja este usuario?"
+                            onConfirm={() => handleDarDeBaja(record.id)}
+                            okText="Sí"
+                            cancelText="No"
+                        >
+                            <Button danger disabled={!isAuthorized}>Dar de Baja</Button>
+                        </Popconfirm>
+                    )}
                 </div>
             ),
         },
@@ -380,7 +422,7 @@ const UserCreate: React.FC = () => {
                 </Form.Item>
 
                 <Form.Item>
-                    <Button type="primary" htmlType="submit" disabled={!isUserAllowed}>
+                    <Button type="primary" htmlType="submit" disabled={!isAuthorized}>
                         Registrar Usuario
                     </Button>
                 </Form.Item>
@@ -408,11 +450,11 @@ const UserCreate: React.FC = () => {
             <Table dataSource={filteredUsuarios} columns={columns} rowKey="id" pagination={{ pageSize: 5 }} scroll={{ x: 800, y: 300 }} />
 
             <Modal
-                title="Editar Usuario"
+                title={reactivando ? 'Reactivar Usuario (actualiza los datos si la licencia fue heredada)' : 'Editar Usuario'}
                 open={editModalVisible}
-                onCancel={() => { setEditModalVisible(false); setEditingUser(null); }}
+                onCancel={() => { setEditModalVisible(false); setEditingUser(null); setReactivando(false); }}
                 onOk={() => editForm.submit()}
-                okText="Guardar"
+                okText={reactivando ? 'Reactivar' : 'Guardar'}
                 cancelText="Cancelar"
             >
                 <Form form={editForm} layout="vertical" onFinish={handleUpdate}>

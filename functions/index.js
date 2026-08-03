@@ -1,20 +1,17 @@
 // functions/index.js
 
-import * as functions from "firebase-functions";
-import * as admin from "firebase-admin";
+const {onCall, HttpsError} = require("firebase-functions/v2/https");
+const {initializeApp} = require("firebase-admin/app");
+const {getAuth} = require("firebase-admin/auth");
+const {getFirestore, FieldValue} = require("firebase-admin/firestore");
 
-admin.initializeApp();
+initializeApp();
 
-exports.createUser = functions.https.onCall(async (data, context) => {
-  // Verify that the request is authenticated
-  if (!context.auth) {
-    throw new functions.https.HttpsError(
-        "unauthenticated",
-        "The function must be called while authenticated.",
-    );
+exports.createUser = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Must be authenticated.");
   }
 
-  // Extract data
   const {
     email,
     password,
@@ -22,19 +19,16 @@ exports.createUser = functions.https.onCall(async (data, context) => {
     apellidoPaterno,
     apellidoMaterno,
     areaTrabajo,
-  } = data;
+  } = request.data;
 
   try {
-    // Create the user without signing in
-    const userRecord = await admin.auth().createUser({
+    const userRecord = await getAuth().createUser({
       email,
       password,
       displayName: `${nombreCompleto} ${apellidoPaterno} ${apellidoMaterno}`,
     });
 
-    // Save additional user data to Firestore
-    await admin
-        .firestore()
+    await getFirestore()
         .collection("usuarios")
         .doc(userRecord.uid)
         .set({
@@ -43,12 +37,30 @@ exports.createUser = functions.https.onCall(async (data, context) => {
           apellido_materno: apellidoMaterno,
           area: areaTrabajo,
           correo: email,
-          fecha_creado: admin.firestore.FieldValue.serverTimestamp(),
+          fecha_creado: FieldValue.serverTimestamp(),
         });
 
     return {uid: userRecord.uid};
   } catch (error) {
     console.error("Error creating new user:", error);
-    throw new functions.https.HttpsError("unknown", error.message, error);
+    throw new HttpsError("unknown", error.message, error);
   }
 });
+
+exports.deleteAuthUser = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Must be authenticated.");
+  }
+  const {uid} = request.data;
+  if (!uid) {
+    throw new HttpsError("invalid-argument", "UID requerido.");
+  }
+  try {
+    await getAuth().deleteUser(uid);
+    return {success: true};
+  } catch (error) {
+    console.error("Error deleting auth user:", error);
+    throw new HttpsError("unknown", error.message, error);
+  }
+});
+

@@ -2,7 +2,8 @@ import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getAnalytics, isSupported } from "firebase/analytics";
 import { getFirestore } from "firebase/firestore";
-import { getStorage } from "firebase/storage"; // Importar Storage
+import { getStorage } from "firebase/storage";
+import { getFunctions, connectFunctionsEmulator } from "firebase/functions";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDArlaidbMgHfMvy4U6HcaNS3B9j59pN60",
@@ -24,3 +25,6 @@ export const auth = getAuth(app);
 export const db = getFirestore(app);
 // Agrega Storage
 export const storage = getStorage(app, "gs://incidencias-a781e.firebasestorage.app");
+export const functions = getFunctions(app, "us-central1");
+// Para probar en local descomenta esto Y ejecuta: firebase emulators:start --only functions
+// if (location.hostname === "localhost") connectFunctionsEmulator(functions, "localhost", 5001);

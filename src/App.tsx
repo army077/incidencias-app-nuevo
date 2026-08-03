@@ -183,20 +183,22 @@ function App() {
           meta: { label: "Panel de control", icon: <BarChartOutlined /> },
         },
         {
-          name: "user_form",
-          list: "/user_form",
-          meta: { label: "Alta de usuarios", icon: <UserAddOutlined /> },
-        },
-        {
           name: "impresion_acta",
           list: "/impresion_acta",
           meta: { label: "Impresión de acta", icon: <FilePdfOutlined /> },
         },
-        ...(canSeeLideres ? [{
-          name: "Lideres",
-          list: "/lideres",
-          meta: { label: "Lideres", icon: <FaUserTie /> },
-        }] : []),
+        ...(canSeeLideres ? [
+          {
+            name: "user_form",
+            list: "/user_form",
+            meta: { label: "Alta de usuarios", icon: <UserAddOutlined /> },
+          },
+          {
+            name: "Lideres",
+            list: "/lideres",
+            meta: { label: "Lideres", icon: <FaUserTie /> },
+          },
+        ] : []),
       ]
       : [];
   return (

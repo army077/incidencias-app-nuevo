@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { MDBBtn, MDBContainer, MDBRow, MDBCol, MDBIcon, MDBInput } from 'mdb-react-ui-kit';
 import { GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, deleteUser } from 'firebase/auth';
-import { auth, db } from './firebaseConfig'; // Importar Firestore
+import { auth, db } from './firebaseConfig';
 import { useNavigate } from 'react-router-dom';
-import { doc, getDoc } from 'firebase/firestore'; // Métodos para Firestore
+import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import './Login.css';
 
 const Login: React.FC = () => {
@@ -26,7 +26,12 @@ const Login: React.FC = () => {
       const userSnapshot = await getDoc(userDocRef);
 
       if (userSnapshot.exists()) {
-        console.log('Usuario registrado, acceso permitido:', user.email);
+        // Bloquear acceso si el usuario está dado de baja
+        if (userSnapshot.data().activo === false) {
+          setError('Usuario dado de baja. Contacte con Recursos Humanos.');
+          await auth.signOut();
+          return;
+        }
         navigate('/')
       } else {
         setError('Usuario no registrado. Contacte con el administrador.');
@@ -44,11 +49,18 @@ const Login: React.FC = () => {
     e.preventDefault();
     setError(null);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      console.log("Inicio de sesión exitoso con correo y contraseña.");
-      navigate('/')
+      const result = await signInWithEmailAndPassword(auth, email, password);
+      // Verificar que el usuario esté activo en Firestore
+      const q = query(collection(db, 'usuarios'), where('correo', '==', result.user.email));
+      const snap = await getDocs(q);
+      if (!snap.empty && snap.docs[0].data().activo === false) {
+        await auth.signOut();
+        setError('Usuario dado de baja. Contacte con Recursos Humanos.');
+        return;
+      }
+      navigate('/');
     } catch (err: any) {
-      setError(err.message); 
+      setError(err.message);
     }
   };
 
