@@ -251,8 +251,9 @@ export const LideresGeneral: React.FC = () => {
       setUsuariosSidebar((prev) => [...prev, data]);
       setCreateOpen(false);
       setCreateForm(emptyForm);
-    } catch {
-      setError("Error al crear el líder.");
+    } catch (e) {
+      const msg = axios.isAxiosError(e) ? e.response?.data?.error : undefined;
+      setError(msg ? `Error al crear el líder: ${msg}` : "Error al crear el líder.");
     } finally {
       setCreating(false);
     }
@@ -295,8 +296,9 @@ export const LideresGeneral: React.FC = () => {
       );
       setEditOpen(false);
       setEditingLider(null);
-    } catch {
-      setError("Error al actualizar el líder.");
+    } catch (e) {
+      const msg = axios.isAxiosError(e) ? e.response?.data?.error : undefined;
+      setError(msg ? `Error al actualizar el líder: ${msg}` : "Error al actualizar el líder.");
     } finally {
       setUpdating(false);
     }
