@@ -128,6 +128,11 @@ const enviarTemplate = async (variables: Record<string, string>, telefono: strin
                 }),
             }
         );
+        if (!response.ok) {
+            // Se registra el cuerpo de la respuesta para poder diagnosticar el motivo real del rechazo (Twilio/API)
+            const errorBody = await response.text().catch(() => "");
+            console.error("Fallo al enviar WhatsApp:", response.status, errorBody, { telefono, variables });
+        }
         return response.ok;
     } catch (error) {
         console.error("Error al enviar WhatsApp:", error);

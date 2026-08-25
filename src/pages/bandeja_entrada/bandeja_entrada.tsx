@@ -134,8 +134,8 @@ export const TablaPermisos: React.FC = () => {
             setArea(userArea);
             setUserName(userDoc.correo || '');
 
-            // Cuando ya tengamos el area y el nombre, llamamos a fetchPermisosFiltrados
-            await fetchPermisosFiltrados(userArea, userDoc.nombre);
+            // Cuando ya tengamos el area y el correo, llamamos a fetchPermisosFiltrados
+            await fetchPermisosFiltrados(userArea, userDoc.correo);
           } else {
             message.error("No se encontró información del usuario en la colección 'usuarios'.");
           }
@@ -168,8 +168,14 @@ export const TablaPermisos: React.FC = () => {
       const url = `https://desarrollotecnologicoar.com/api3/permisos`;
       let response = await axios.get<Permiso[]>(url);
 
-
-      setData(response.data.filter((permiso) => permiso.area === userArea || permiso.correo_lider === correo));
+      const correoNormalizado = (correo || "").trim().toLowerCase();
+      setData(
+        response.data.filter(
+          (permiso) =>
+            permiso.area === userArea ||
+            (permiso.correo_lider || "").trim().toLowerCase() === correoNormalizado
+        )
+      );
     } catch (error) {
       console.error("Error al obtener permisos filtrados:", error);
       message.error("Hubo un error al cargar los permisos por área o jefe_inmediato.");

@@ -35,7 +35,6 @@ export const DetallePermiso = () => {
   const [isRejectModalVisible, setIsRejectModalVisible] = useState(false);
   const [nuevoStatus, setNuevoStatus] = useState<string>(""); // Estado del nuevo status
   const [rechazoComentarios, setRechazoComentarios] = useState<string>("");
-  const [showUploadSection, setShowUploadSection] = useState(false);
   const [fileToUpload, setFileToUpload] = useState<File | null>(null);
   const [form] = Form.useForm(); // Crear una instancia del formulario
   const [okButtonDisabled, setOkButtonDisabled] = useState(true);
@@ -60,30 +59,36 @@ export const DetallePermiso = () => {
     fetchPermiso();
   }, [id]);
 
-  const handleFormChange = async (changedValues: any) => {
-    // Obtener el valor más actualizado directamente del form
-    const currentTipoRegistro = form.getFieldValue("tipo_registro");
-    
-    // Asegúrate de actualizar el estado
+  const handleFormChange = (changedValues: any, allValues: any) => {
     if (changedValues.tipo_registro) {
       setTipoRegistro(changedValues.tipo_registro);
     }
-  
-    const allFieldsValid = await form
-      .validateFields()
-      .then(() => true)
-      .catch(() => false);
 
-    if (
-      currentTipoRegistro &&
-      ["Mala actitud", "Falta injustificada."].includes(currentTipoRegistro) &&
-      !fileToUpload
-    ) {
+    // Campos requeridos: calculados directamente, sin validateFields async (evita condiciones de carrera)
+    const tipo = allValues.tipo_registro;
+    const infoRegistro = (allValues.info_registro ?? "").trim();
+    const requiereActa = tipo && ["Mala actitud", "Falta injustificada."].includes(tipo);
+
+    if (requiereActa && !fileToUpload) {
       setOkButtonDisabled(true);
     } else {
-      setOkButtonDisabled(!allFieldsValid);
+      setOkButtonDisabled(!tipo || !infoRegistro);
     }
   };
+
+  // El <Upload> no está enlazado a un Form.Item, así que subir el archivo no dispara onValuesChange; se recalcula aquí
+  useEffect(() => {
+    const allValues = form.getFieldsValue();
+    const tipo = allValues.tipo_registro;
+    const infoRegistro = (allValues.info_registro ?? "").trim();
+    const requiereActa = tipo && ["Mala actitud", "Falta injustificada."].includes(tipo);
+
+    if (requiereActa && !fileToUpload) {
+      setOkButtonDisabled(true);
+    } else {
+      setOkButtonDisabled(!tipo || !infoRegistro);
+    }
+  }, [fileToUpload]);
 
   // Validar datos del usuario
   useEffect(() => {
@@ -161,10 +166,6 @@ export const DetallePermiso = () => {
 
 
   };
-  const handleGenerarActa = () => {
-    setShowUploadSection((prevState) => !prevState); // Alternar visibilidad
-  };
-
   // Modal para confirmar el rechazo
   const confirmRejection = async () => {
     try {
@@ -289,7 +290,7 @@ export const DetallePermiso = () => {
             <Input disabled />
           </Form.Item>
 
-          <Form.Item label="Información del Registro" name="info_registro">
+          <Form.Item label="Información del Registro" name="info_registro" rules={[{ required: true, message: 'Campo requerido' }]}>
             <Input.TextArea rows={5} />
           </Form.Item>
 
@@ -327,17 +328,12 @@ export const DetallePermiso = () => {
           {(tipoRegistro === "Mala actitud" || tipoRegistro === "Falta injustificada.") && (
               <>
                 <Form.Item>
-                  <Button type="primary" onClick={handleGenerarActa}>
-                    Adjuntar Acta
-                  </Button>
-                  <span style={{ marginLeft: "10px" }}>
-                    <a
-                      onClick={() => navigate("/impresion_acta")}
-                      style={{ color: "#1890ff", cursor: "pointer" }}
-                    >
-                      ¿No cuentas con acta? Llénala aquí!
-                    </a>
-                  </span>
+                  <a
+                    onClick={() => navigate("/impresion_acta")}
+                    style={{ color: "#1890ff", cursor: "pointer" }}
+                  >
+                    ¿No cuentas con acta? Llénala aquí!
+                  </a>
                 </Form.Item>
 
                 <Form.Item label="Subir Acta Administrativa">
