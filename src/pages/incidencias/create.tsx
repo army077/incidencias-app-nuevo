@@ -447,6 +447,7 @@ export const BlogPostCreate = () => {
                 label: "Permiso de inasistencia sin goce de sueldo.",
               },
               { value: "Reconocimiento al desempeño", label: "Reconocimiento al desempeño" },
+              { value: "Evento extraordinario", label: "Evento extraordinario" },
             ]}
           />
         </Form.Item>
