@@ -187,7 +187,7 @@ export const IncidenciasPorTiempoList: React.FC<IncidenciasGraficaProps> = ({ ag
                             dataSource={data}
                             pagination={false}
                             rowKey="name"
-                            scroll={{ y: 275 }}
+                            scroll={{ x: 'max-content', y: 275 }}
                         />
                     </div>
                 </Col>

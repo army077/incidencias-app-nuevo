@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Button, Table, message } from "antd";
+import { Button, Grid, Table, message } from "antd";
 import { useNavigate } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../../firebaseConfig";
@@ -23,6 +23,8 @@ type Permiso = {
 
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
+  const screens = Grid.useBreakpoint();
+  const isMobile = !screens.md;
   const [permisos, setPermisos] = useState<Permiso[]>([]);
   const [loading, setLoading] = useState(true);
   const [userEmail, setUserEmail] = useState<string | null>(null);
@@ -192,15 +194,18 @@ const HomePage: React.FC = () => {
   ];
 
   return (
-    <div style={{ padding: 24 }}>
-      <h1 style={{ textAlign: "center" }}>Bienvenido a la página de incidencias</h1>
+    <div style={{ padding: isMobile ? 12 : 24 }}>
+      <h1 style={{ textAlign: "center", fontSize: isMobile ? 22 : undefined }}>
+        Bienvenido a la página de incidencias
+      </h1>
 
       {/* Contenedor para centrar botones */}
       <div
         style={{
           display: "flex",
+          flexDirection: isMobile ? "column" : "row",
           justifyContent: "center",
-          gap: "20px", // Espaciado entre botones
+          gap: isMobile ? "12px" : "20px",
           marginTop: "20px",
         }}
       >
@@ -210,8 +215,8 @@ const HomePage: React.FC = () => {
             size="large"
             onClick={handleNewIncidentClick}
             style={{
-              padding: "10px 40px",
-              fontSize: "18px",
+              padding: isMobile ? "10px 16px" : "10px 40px",
+              fontSize: isMobile ? "16px" : "18px",
               backgroundColor: "#ff4d4f", // Color de fondo personalizado
               borderColor: "#ff4d4f", // Borde del mismo color
             }}
@@ -225,8 +230,8 @@ const HomePage: React.FC = () => {
           size="large"
           onClick={handleNewPermitClick}
           style={{
-            padding: "10px 40px",
-            fontSize: "18px",
+            padding: isMobile ? "10px 16px" : "10px 40px",
+            fontSize: isMobile ? "16px" : "18px",
           }}
         >
           Solicitar permiso
@@ -241,7 +246,8 @@ const HomePage: React.FC = () => {
           loading={loading}
           rowKey="id"
           pagination={{ pageSize: 10, showSizeChanger: true, pageSizeOptions: ['10', '20', '30', '50'] }}
-          scroll={{ y: 'calc(100vh - 280px)' }}
+          scroll={{ x: "max-content", y: isMobile ? undefined : "calc(100vh - 280px)" }}
+          size={isMobile ? "small" : "middle"}
           style={{ width: '100%' }}
         />
       </div>

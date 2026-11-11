@@ -432,7 +432,7 @@ const UserCreate: React.FC = () => {
             <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
                 <Select
                     placeholder="Filtrar por área"
-                    style={{ width: 240 }}
+                    style={{ width: 240, maxWidth: "100%" }}
                     onChange={(value) => setSelectedArea(value ?? null)}
                     allowClear
                     options={opciones}

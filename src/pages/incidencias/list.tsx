@@ -7,7 +7,8 @@ import {
   ShowButton,
   useTable,
 } from "@refinedev/antd";
-import { Space, Table, Input, Row, Col, Spin, message, Pagination } from "antd";
+import { Space, Table, Input, Row, Col, Spin, message, Pagination, Modal, Descriptions } from "antd";
+import dayjs from "dayjs";
 import { auth, db } from "../../firebaseConfig";
 import { onAuthStateChanged } from "firebase/auth";
 import { collection, query, where, getDocs } from "firebase/firestore";
@@ -25,6 +26,7 @@ export const BlogPostList = () => {
   const [userArea, setUserArea] = useState<string | null>(null);
   const [filteredData, setFilteredData] = useState<BaseRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState<BaseRecord | null>(null);
   const [searchText, setSearchText] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10); // Tamaño de la página
@@ -144,7 +146,7 @@ export const BlogPostList = () => {
         <div>Aún no hay registro de incidencias.</div>
 
         <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-          <Col span={8}>
+          <Col xs={24} md={8}>
             <Input
               placeholder="Buscar por Persona Emisor, Nombre o Tipo de Registro"
               value={searchText}
@@ -175,14 +177,14 @@ export const BlogPostList = () => {
   return (
     <List>
       <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-        <Col span={8}>
+        <Col xs={24} md={8}>
           <Input
             placeholder="Buscar por Persona Emisor, Nombre o Tipo de Registro"
             value={searchText}
             onChange={handleSearch}
           />
         </Col>
-        <Col span={8} offset={8} style={{ textAlign: "right" }}>
+        <Col xs={24} md={{ span: 8, offset: 8 }} style={{ textAlign: "right" }}>
           <Button
             type="primary"
             size="middle"
@@ -194,7 +196,8 @@ export const BlogPostList = () => {
               fontSize: "16px",
               backgroundColor: "#ff4d4f", // Color de fondo personalizado
               borderColor: "#ff4d4f", // Borde del mismo color
-              width: "25%",
+              width: "auto",
+              minWidth: "25%",
 
             }}
           >
@@ -207,8 +210,9 @@ export const BlogPostList = () => {
       <Table
         dataSource={paginatedData}
         rowKey="id"
+        onRow={(record) => ({ onClick: () => setSelected(record), style: { cursor: "pointer" } })}
         pagination={false}
-        scroll={{ y: 'calc(100vh - 300px)' }}
+        scroll={{ x: 'max-content', y: 'calc(100vh - 300px)' }}
         style={{ width: '100%' }}
       >
         <Table.Column dataIndex="id" title="ID" />
@@ -229,7 +233,7 @@ export const BlogPostList = () => {
         <Table.Column
           title="Acciones"
           render={(_, record: BaseRecord) => (
-            <Space>
+            <Space onClick={(e) => e.stopPropagation()}>
               <EditButton hideText size="small" recordItemId={record.id} />
               <ShowButton hideText size="small" recordItemId={record.id} />
               <DeleteButton hideText size="small" recordItemId={record.id} />
@@ -247,6 +251,37 @@ export const BlogPostList = () => {
         showSizeChanger
         pageSizeOptions={['10', '20', '30', '50']}        style={{ marginTop: 16, textAlign: "right" }}
       />
+
+      <Modal
+        open={!!selected}
+        title={selected ? `Incidencia #${selected.id}` : ""}
+        onCancel={() => setSelected(null)}
+        footer={<Button onClick={() => setSelected(null)}>Cerrar</Button>}
+        centered
+        width="min(600px, 95vw)"
+      >
+        {selected && (
+          <Descriptions column={1} bordered size="small">
+            <Descriptions.Item label="Fecha de emisión">
+              {selected.marca_temporal ? dayjs(selected.marca_temporal).format("DD/MM/YYYY HH:mm") : "-"}
+            </Descriptions.Item>
+            <Descriptions.Item label="Persona emisora">{selected.persona_emisor}</Descriptions.Item>
+            <Descriptions.Item label="Nombre del registrado">{selected.nombre_emisor}</Descriptions.Item>
+            <Descriptions.Item label="Jefe inmediato">{selected.jefe_inmediato || "-"}</Descriptions.Item>
+            <Descriptions.Item label="Área">{selected.area || "-"}</Descriptions.Item>
+            <Descriptions.Item label="Tipo de registro">{selected.tipo_registro}</Descriptions.Item>
+            {selected.fecha_permiso && (
+              <Descriptions.Item label="Fecha del permiso">
+                {dayjs(selected.fecha_permiso).format("DD/MM/YYYY")}
+              </Descriptions.Item>
+            )}
+            <Descriptions.Item label="Información de registro">
+              <span style={{ whiteSpace: "pre-wrap" }}>{selected.info_registro || "-"}</span>
+            </Descriptions.Item>
+            <Descriptions.Item label="Status del acta">{selected.status_acta}</Descriptions.Item>
+          </Descriptions>
+        )}
+      </Modal>
     </List>
   );
 };

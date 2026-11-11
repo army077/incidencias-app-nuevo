@@ -4,7 +4,7 @@ import { RefineKbar, RefineKbarProvider } from "@refinedev/kbar";
 import { Image } from "antd";
 import { useContext } from "react";
 import { Dashboard } from "./pages/dashboard/dashboard";
-import { BarChartOutlined, InboxOutlined, LineChartOutlined, UserAddOutlined, PrinterFilled, PrinterOutlined, FilePdfOutlined, FileAddFilled } from "@ant-design/icons";
+import { BarChartOutlined, InboxOutlined, LineChartOutlined, UserAddOutlined, PrinterFilled, PrinterOutlined, FilePdfOutlined, FileAddFilled, FileTextOutlined } from "@ant-design/icons";
 import { Link } from "react-router-dom";
 import { PDFEditor } from "./pages/impresion_actas/formato_acta"
 import HomePage from "./pages/inicio/inicio";
@@ -135,9 +135,16 @@ function App() {
     userEmail === 'developer@asiarobotica.com' || userEmail === 'marada@asiarobotica.com' ||
     normArea(userArea ?? '') === 'recursos_humanos';
 
+  const misSolicitudes = {
+    name: "mis_solicitudes",
+    list: "/",
+    meta: { label: "Mis solicitudes", icon: <FileTextOutlined /> },
+  };
+
   const resources =
     usuariosSidebar.includes(userEmail || "") // Verifica si el correo está en la lista
       ? [
+        misSolicitudes,
         {
           name: "tabla_permisos",
           list: "/bandeja_entrada",
@@ -200,7 +207,7 @@ function App() {
           },
         ] : []),
       ]
-      : [];
+      : [misSolicitudes];
   return (
     <BrowserRouter>
       <RefineKbarProvider>

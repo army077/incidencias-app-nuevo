@@ -7,6 +7,7 @@ import {
   theme,
   Typography,
   Button,
+  Grid,
 } from "antd";
 import React, { useContext, useEffect, useState } from "react";
 import { ColorModeContext } from "../../contexts/color-mode";
@@ -25,6 +26,8 @@ export const Header: React.FC<RefineThemedLayoutV2HeaderProps> = ({
   sticky = true,
 }) => {
   const { token } = useToken();
+  const screens = Grid.useBreakpoint();
+  const isMobile = !screens.md;
   const { mode, setMode } = useContext(ColorModeContext);
   const [user, setUser] = useState<IUser | null>(null); // Estado para almacenar los datos del usuario
 
@@ -52,8 +55,9 @@ export const Header: React.FC<RefineThemedLayoutV2HeaderProps> = ({
     display: "flex",
     justifyContent: "flex-end",
     alignItems: "center",
-    padding: "0px 24px",
+    padding: isMobile ? "0px 12px" : "0px 24px",
     height: "64px",
+    whiteSpace: "nowrap",
   };
 
   if (sticky) {
@@ -108,9 +112,9 @@ export const Header: React.FC<RefineThemedLayoutV2HeaderProps> = ({
           onChange={() => setMode(mode === "light" ? "dark" : "light")}
           defaultChecked={mode === "dark"}
         />
-        <Space style={{ marginLeft: "8px" }} size="middle">
+        <Space style={{ marginLeft: isMobile ? 0 : "8px" }} size={isMobile ? "small" : "middle"}>
           {/* Mostrar el nombre del usuario */}
-          {displayName}
+          {!isMobile && displayName}
 
           {/* Mostrar el correo del usuario
           {user?.email && <Text>{user.email}</Text>} */}

@@ -1,6 +1,6 @@
 import { auth, db } from "../../firebaseConfig";
 import { collection, query, where, getDocs } from "firebase/firestore";
-import { Table, message, Spin, Button, Tabs } from "antd";
+import { Table, message, Spin, Button, Tabs, Modal, Descriptions } from "antd";
 import { useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import axios from "axios";
@@ -36,8 +36,13 @@ const columns = (navigate: (path: string) => void) => [
   { title: "Area", dataIndex: "area", key: "area" },
   { title: "Jefe Inmediato", dataIndex: "jefe_inmediato", key: "jefe_inmediato" },
   { title: "Tipo de permiso", dataIndex: "tipo_permiso", key: "tipo_permiso" },
-  { title: "Urgencia", dataIndex: "urgencia", key: "urgencia" },
-  { title: "Comentarios", dataIndex: "comentarios", key: "comentarios" },
+  {
+    title: "Comentarios",
+    dataIndex: "comentarios",
+    key: "comentarios",
+    render: (texto: string) =>
+      texto && texto.length > 35 ? `${texto.slice(0, 35)}...` : texto,
+  },
   {
     title: "Fecha de permiso",
     dataIndex: "fecha_permiso",
@@ -58,7 +63,10 @@ const columns = (navigate: (path: string) => void) => [
         <Button
           style={{ backgroundColor: color, color: "white", border: "none" }}
           disabled={isDisabled}
-          onClick={() => navigate(`/detalle_permiso/${record.id}`)}
+          onClick={(e) => {
+            e.stopPropagation();
+            navigate(`/detalle_permiso/${record.id}`);
+          }}
         >
           {status}
         </Button>
@@ -73,6 +81,7 @@ export const TablaPermisos: React.FC = () => {
   const [area, setArea] = useState<string>("");
   const [userName, setUserName] = useState<string>("");
   const navigate = useNavigate();
+  const [selected, setSelected] = useState<Permiso | null>(null);
   const [usuariosPermitidos, setUsuariosPermitidos] = useState<string[]>([]);
   const [loadingGerentes, setLoadingGerentes] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -195,19 +204,21 @@ export const TablaPermisos: React.FC = () => {
   }
 
   return (
+    <>
     <Tabs defaultActiveKey="1" centered tabBarGutter={20} tabBarStyle={{ minHeight: 48 }}>
       <Tabs.TabPane tab="Pendientes" key="1">
         <Table
           columns={columns(navigate)}
           dataSource={permisosPendientes}
           rowKey="id"
+          onRow={(record) => ({ onClick: () => setSelected(record), style: { cursor: "pointer" } })}
           pagination={{
             pageSize,
             showSizeChanger: true,
             pageSizeOptions: ['10', '20', '30', '50'],
             onChange: (_, size) => setPageSize(size),
           }}
-          scroll={{ y: 'calc(100vh - 260px)' }}
+          scroll={{ x: 'max-content', y: 'calc(100vh - 260px)' }}
           style={{ width: '100%' }}
         />
       </Tabs.TabPane>
@@ -217,13 +228,14 @@ export const TablaPermisos: React.FC = () => {
           columns={columns(navigate)}
           dataSource={permisosAprobados}
           rowKey="id"
+          onRow={(record) => ({ onClick: () => setSelected(record), style: { cursor: "pointer" } })}
           pagination={{
             pageSize,
             showSizeChanger: true,
             pageSizeOptions: ['10', '20', '30', '50'],
             onChange: (_, size) => setPageSize(size),
           }}
-          scroll={{ y: 'calc(100vh - 260px)' }}
+          scroll={{ x: 'max-content', y: 'calc(100vh - 260px)' }}
           style={{ width: '100%' }}
         />
       </Tabs.TabPane>
@@ -233,16 +245,49 @@ export const TablaPermisos: React.FC = () => {
           columns={columns(navigate)}
           dataSource={permisosRechazados}
           rowKey="id"
+          onRow={(record) => ({ onClick: () => setSelected(record), style: { cursor: "pointer" } })}
           pagination={{
             pageSize,
             showSizeChanger: true,
             pageSizeOptions: ['10', '20', '30', '50'],
             onChange: (_, size) => setPageSize(size),
           }}
-          scroll={{ y: 'calc(100vh - 260px)' }}
+          scroll={{ x: 'max-content', y: 'calc(100vh - 260px)' }}
           style={{ width: '100%' }}
         />
       </Tabs.TabPane>
     </Tabs>
+    <Modal
+      open={!!selected}
+      title={selected ? `Solicitud #${selected.id}` : ""}
+      onCancel={() => setSelected(null)}
+      footer={<Button onClick={() => setSelected(null)}>Cerrar</Button>}
+      centered
+      width="min(600px, 95vw)"
+    >
+      {selected && (
+        <Descriptions column={1} bordered size="small">
+          <Descriptions.Item label="Fecha de solicitud">
+            {moment(selected.fecha_solicitud).format("DD/MM/YYYY HH:mm")}
+          </Descriptions.Item>
+          <Descriptions.Item label="Nombre">{selected.nombre_completo}</Descriptions.Item>
+          <Descriptions.Item label="Correo">{selected.correo}</Descriptions.Item>
+          <Descriptions.Item label="Área">{selected.area}</Descriptions.Item>
+          <Descriptions.Item label="Jefe inmediato">{selected.jefe_inmediato}</Descriptions.Item>
+          <Descriptions.Item label="Tipo de permiso">{selected.tipo_permiso}</Descriptions.Item>
+          <Descriptions.Item label="Urgencia">{selected.urgencia ? "Urgente" : "No urgente"}</Descriptions.Item>
+          <Descriptions.Item label="Comentarios">
+            <span style={{ whiteSpace: "pre-wrap" }}>{selected.comentarios || "-"}</span>
+          </Descriptions.Item>
+          <Descriptions.Item label="Fecha de permiso">
+            {selected.fecha_permiso
+              ? moment(selected.fecha_permiso.substring(0, 10), "YYYY-MM-DD").format("DD/MM/YYYY")
+              : "-"}
+          </Descriptions.Item>
+          <Descriptions.Item label="Status">{selected.status}</Descriptions.Item>
+        </Descriptions>
+      )}
+    </Modal>
+    </>
   );
 };

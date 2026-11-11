@@ -1,13 +1,36 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Card, Button, Spin, message, Typography, Tag, Space, Modal, Form, Input, DatePicker, Select, Upload } from "antd";
-import { UploadOutlined } from "@ant-design/icons";
+import { Card, Button, Spin, message, Typography, Tag, Space, Modal, Form, Input, DatePicker, Select, Upload, Avatar, theme } from "antd";
+import { UploadOutlined, UserOutlined, TeamOutlined, FileTextOutlined, MessageOutlined } from "@ant-design/icons";
 import { getDownloadURL, ref, uploadBytesResumable } from "firebase/storage";
 import axios from "axios";
 import { auth } from "../../firebaseConfig";
 import dayjs from "dayjs";
-const { Text } = Typography;
+const { Text, Title } = Typography;
 import moment from "moment";
+
+const iniciales = (nombre: string) =>
+  (nombre || "").split(" ").filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join("");
+
+const Seccion: React.FC<{ icono: React.ReactNode; titulo: string; children: React.ReactNode }> = ({ icono, titulo, children }) => {
+  const { token } = theme.useToken();
+  return (
+    <div style={{ background: token.colorFillAlter, borderRadius: 12, padding: 16 }}>
+      <Space size={8} style={{ marginBottom: 12 }}>
+        {icono}
+        <Text strong style={{ fontSize: 16 }}>{titulo}</Text>
+      </Space>
+      <Space direction="vertical" size={10} style={{ width: "100%" }}>{children}</Space>
+    </div>
+  );
+};
+
+const Dato: React.FC<{ etiqueta: string; valor: React.ReactNode }> = ({ etiqueta, valor }) => (
+  <div style={{ display: "flex", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+    <Text type="secondary" style={{ textTransform: "capitalize" }}>{etiqueta}</Text>
+    <Text style={{ textAlign: "right" }}>{valor}</Text>
+  </div>
+);
 
 interface Permiso {
   id: string;
@@ -22,9 +45,14 @@ interface Permiso {
   status: string;
   fecha_permiso: string;
   motivo_rechazado: string;
+  correo_lider?: string;
 }
 
 export const DetallePermiso = () => {
+  const camposMostrados = [
+    "id", "nombre_completo", "correo", "area", "jefe_inmediato", "fecha_solicitud",
+    "fecha_permiso", "tipo_permiso", "urgencia", "comentarios", "status", "motivo_rechazado", "correo_lider",
+  ];
   const { id } = useParams<{ id: string }>(); // Obtener ID de la URL
   const navigate = useNavigate(); // Navegar entre rutas
   const [loading, setLoading] = useState(true); // Estado de carga
@@ -195,39 +223,80 @@ export const DetallePermiso = () => {
 
   return (
     <Card
-      title={`Permiso de ${permiso.nombre_completo}`}
       bordered={false}
-      style={{ width: 600, margin: "50px auto", borderRadius: "12px", boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)" }}
+      style={{ width: "100%", maxWidth: 640, margin: "24px auto", borderRadius: 16, boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)" }}
+      bodyStyle={{ padding: 16 }}
     >
-      <Space direction="vertical" size="large" style={{ width: "100%" }}>
-        <Text><strong>ID de solicitud: </strong>{permiso.id}</Text>
+      <Space direction="vertical" size={16} style={{ width: "100%" }}>
+        <Title level={4} style={{ margin: 0 }}>Solicitud #{permiso.id}</Title>
 
-        <Text><strong>Correo:</strong> <Text>{permiso.correo}</Text> </Text>
-        
+        <Seccion icono={<UserOutlined />} titulo="Datos del colaborador">
+          <Space align="center" size={12}>
+            <Avatar size={44} style={{ backgroundColor: "#1677ff" }}>{iniciales(permiso.nombre_completo)}</Avatar>
+            <div>
+              <Text strong style={{ fontSize: 16 }}>{permiso.nombre_completo}</Text>
+              <br />
+              <Text type="secondary">{permiso.correo}</Text>
+            </div>
+          </Space>
+          <Dato etiqueta="Área" valor={permiso.area ? permiso.area.replace(/_/g, " ").toUpperCase() : "-"} />
+        </Seccion>
 
-        <Text><strong>Fecha de Solicitud: </strong><Text>{moment(permiso.fecha_solicitud).format("DD/MM/YYYY HH:MM")}</Text></Text> 
-        
+        <Seccion icono={<TeamOutlined />} titulo="Datos del líder">
+          <Dato etiqueta="Jefe inmediato" valor={permiso.jefe_inmediato || "-"} />
+          {permiso.correo_lider && <Dato etiqueta="Correo líder" valor={permiso.correo_lider} />}
+        </Seccion>
 
-        <Text><strong>Tipo de Permiso: </strong>{permiso.tipo_permiso}</Text>
+        <Seccion icono={<FileTextOutlined />} titulo="Datos del permiso">
+          <Dato etiqueta="Tipo de permiso" valor={permiso.tipo_permiso} />
+          <Dato
+            etiqueta="Urgencia"
+            valor={<Tag color={permiso.urgencia ? "red" : "green"} style={{ margin: 0 }}>{permiso.urgencia ? "Urgente" : "No Urgente"}</Tag>}
+          />
+          <Dato etiqueta="Fecha de solicitud" valor={moment(permiso.fecha_solicitud).format("DD/MM/YYYY HH:mm")} />
+          {permiso.motivo_rechazado && <Dato etiqueta="Motivo de rechazo" valor={permiso.motivo_rechazado} />}
+          {Object.entries(permiso)
+            .filter(([key, value]) => !camposMostrados.includes(key) && value !== null && value !== "" && typeof value !== "object")
+            .map(([key, value]) => (
+              <Dato key={key} etiqueta={key.replace(/_/g, " ")} valor={String(value)} />
+            ))}
+          <Dato
+            etiqueta="Fecha del permiso"
+            valor={permiso.fecha_permiso ? moment(permiso.fecha_permiso.substring(0, 10), "YYYY-MM-DD").format("DD/MM/YYYY") : "-"}
+          />
+          <Dato
+            etiqueta="Status actual"
+            valor={
+              <Tag
+                style={{ margin: 0 }}
+                color={permiso.status === "Pendiente" ? "orange" : permiso.status === "Aprobado" ? "green" : "red"}
+              >
+                {permiso.status}
+              </Tag>
+            }
+          />
+        </Seccion>
 
+        <Seccion icono={<MessageOutlined />} titulo="Comentarios">
+          {(permiso.comentarios || "-").split("\n").map((linea, i) => (
+            <div key={i}>
+              <span
+                style={{
+                  background: "rgba(250, 173, 20, 0.35)",
+                  borderRadius: 6,
+                  padding: "2px 6px",
+                  boxDecorationBreak: "clone",
+                  WebkitBoxDecorationBreak: "clone",
+                  lineHeight: 1.8,
+                }}
+              >
+                {linea}
+              </span>
+            </div>
+          ))}
+        </Seccion>
 
-        <Text strong>Urgencia:         <Tag color={permiso.urgencia ? "red" : "green"}>
-          {permiso.urgencia ? "Urgente" : "No Urgente"}
-        </Tag></Text>
-
-
-        <Text><strong>Comentarios:        </strong> '<Text>{permiso.comentarios}</Text>'</Text>
-
-
-        <Text strong>Status Actual:         <Tag color={
-          permiso.status === "Pendiente" ? "orange" :
-            permiso.status === "Aprobado" ? "green" : "red"
-        }>
-          {permiso.status}
-        </Tag></Text>
-
-
-        <Space size="middle" style={{ marginTop: "20px" }}>
+        <Space size="middle" wrap>
           <Button
             type="primary"
             onClick={() => showModal("Aprobado")}
